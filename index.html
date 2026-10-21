@@ -1,1 +1,96 @@
 
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glad Halloween!</title>
+
+    <style>
+        body {
+            background: linear-gradient(#160d2b, #351044);
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .kort {
+            padding: 35px;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #ff8c24;
+            font-size: 48px;
+            text-shadow: 0 0 15px #ff6500;
+        }
+
+        .pumpa {
+            font-size: 85px;
+        }
+
+        p {
+            font-size: 20px;
+            line-height: 1.6;
+        }
+
+        button {
+            background: #ff8c24;
+            color: #1b1030;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #ffd166;
+            transform: scale(1.05);
+        }
+
+        #meddelande {
+            color: #ffd166;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="kort">
+        <div class="pumpa">🎃 👻 🦇</div>
+
+        <h1>Glad Halloween!</h1>
+
+        <p>
+            Vågar du gå ut i mörkret?
+            Akta dig för spöken och häxor!
+        </p>
+
+        <p>
+            Jag önskar dig en riktigt kuslig kväll
+            full av godis och skratt! 🍬
+        </p>
+
+        <button onclick="visaMeddelande()">
+            Klicka om du vågar! 👻
+        </button>
+
+        <p id="meddelande"></p>
+    </main>
+
+    <script>
+        function visaMeddelande() {
+            document.getElementById("meddelande").textContent =
+                "BUUU! 👻 Ett spöke önskar dig en läskigt rolig Halloween!";
+        }
+    </script>
+</body>
+</html>
+
