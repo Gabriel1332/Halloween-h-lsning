@@ -1,35 +1,113 @@
+
 class HalloweenGame {
     #score = 0;
     #state = "ready";
     #targets = new Set();
+    #ghosts = new Set();
+    #traps = new Set();
+    #selected = new Set();
+    #combo = 0;
+    #bestCombo = 0;
+    #message = "Redo för Halloween?";
+    #timeLeft = 0;
+    #lives = 3;
+    #round = 1;
+    #roundScore = 0;
 
-    constructor({ totalTiles = 12, targetCount = 4 } = {}) {
+    constructor({
+        totalTiles = 16,
+        targetCount = 5,
+        totalRounds = 10,
+        startingLives = 3,
+        timeLimit = 30
+    } = {}) {
         if (
-            !Number.isInteger(totalTiles) ||
+            !Number.isInteger(totalTiles) || totalTiles < 1 ||
             !Number.isInteger(targetCount) ||
-            totalTiles < 1 ||
-            targetCount < 1 ||
-            targetCount > totalTiles
+            targetCount < 1 || targetCount > totalTiles ||
+            !Number.isInteger(totalRounds) || totalRounds < 1 ||
+            !Number.isInteger(startingLives) || startingLives < 1 ||
+            !Number.isFinite(timeLimit) || timeLimit < 1
         ) {
             throw new RangeError("Ogiltiga spelinställningar.");
         }
 
         this.totalTiles = totalTiles;
         this.targetCount = targetCount;
+        this.totalRounds = totalRounds;
+        this.startingLives = startingLives;
+        this.timeLimit = Math.floor(timeLimit);
     }
 
     start() {
         this.#score = 0;
+        this.#round = 1;
+        this.#lives = this.startingLives;
+        this.#combo = 0;
+        this.#bestCombo = 0;
+        this.#roundScore = 0;
         this.#state = "playing";
-        this.#targets = new Set();
-
-        while (this.#targets.size < this.targetCount) {
-            this.#targets.add(
-                Math.floor(Math.random() * this.totalTiles)
-            );
-        }
+        this.#message = "Hitta de gömda monstren!";
+        this.#setupRound();
 
         return this.getSnapshot();
+    }
+
+    #setupRound() {
+        this.#targets.clear();
+        this.#ghosts.clear();
+        this.#traps.clear();
+        this.#selected.clear();
+        this.#combo = 0;
+
+        // Fler monster för varje runda.
+        const targetCount = Math.min(
+            this.totalTiles,
+            this.targetCount + Math.floor((this.#round - 1) / 2)
+        );
+
+        // Slumpa fram unika rutor.
+        const tiles = Array.from(
+            { length: this.totalTiles },
+            (_, index) => index
+        );
+
+        for (let i = tiles.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+        }
+
+        this.#targets = new Set(tiles.slice(0, targetCount));
+
+        let position = targetCount;
+        const ghostCount = Math.min(
+            2,
+            this.totalTiles - position
+        );
+
+        this.#ghosts = new Set(
+            tiles.slice(position, position + ghostCount)
+        );
+        position += ghostCount;
+
+        const trapCount = Math.min(
+            2,
+            this.totalTiles - position
+        );
+
+        this.#traps = new Set(
+            tiles.slice(position, position + trapCount)
+        );
+
+        // Sista rundan är en bossrunda.
+        this.#timeLeft = Math.max(
+            8,
+            this.timeLimit - (this.#round - 1) * 2
+        );
+
+        if (this.#round === this.totalRounds) {
+            this.#message = "BOSSFIGHT! Besegra monstren!";
+        }
     }
 
     selectTile(index) {
@@ -45,22 +123,144 @@ class HalloweenGame {
             throw new RangeError("Ogiltig spelruta.");
         }
 
-        if (this.#targets.delete(index)) {
-            this.#score += 1;
+        if (this.#selected.has(index)) {
+            this.#message = "Du har redan undersökt den rutan!";
+            return this.getSnapshot();
         }
 
-        if (this.#targets.size === 0) {
+        this.#selected.add(index);
+
+        if (this.#targets.delete(index)) {
+            this.#combo++;
+            this.#bestCombo = Math.max(
+                this.#bestCombo,
+                this.#combo
+            );
+
+            const comboBonus = Math.min(
+                (this.#combo - 1) * 5,
+                25
+            );
+
+            const bossMultiplier =
+                this.#round === this.totalRounds ? 3 : 1;
+
+            const points = (10 + comboBonus) * bossMultiplier;
+
+            this.#score += points;
+            this.#roundScore += points;
+            this.#message = `Monster hittat! +${points} poäng!`;
+
+            if (this.#combo >= 3) {
+                this.#message += ` ${this.#combo}x KOMBO!`;
+            }
+
+            if (this.#targets.size === 0) {
+                this.#completeRound();
+            }
+        } else if (this.#ghosts.delete(index)) {
+            this.#score += 25;
+            this.#roundScore += 25;
+            this.#combo = 0;
+            this.#message = "👻 Spökbonus! +25 poäng!";
+        } else if (this.#traps.delete(index)) {
+            this.#lives--;
+            this.#combo = 0;
+            this.#message = "💀 Fälla! Du förlorade ett liv!";
+
+            if (this.#lives <= 0) {
+                this.#state = "lost";
+                this.#message = "Game over! Monstren vann!";
+            }
+        } else {
+            this.#combo = 0;
+            this.#message = "Tom ruta... fortsätt leta!";
+        }
+
+        return this.getSnapshot();
+    }
+
+    #completeRound() {
+        if (this.#round === this.totalRounds) {
             this.#state = "won";
+            this.#message = "🏆 Du besegrade Halloween-bossen!";
+            return;
+        }
+
+        this.#round++;
+        this.#message = `Runda klar! Välkommen till runda ${this.#round}!`;
+        this.#setupRound();
+    }
+
+    tick(seconds = 1) {
+        if (this.#state !== "playing") {
+            return this.getSnapshot();
+        }
+
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+            throw new RangeError("Tiden måste vara ett positivt tal.");
+        }
+
+        this.#timeLeft = Math.max(
+            0,
+            this.#timeLeft - seconds
+        );
+
+        if (this.#timeLeft === 0) {
+            this.#lives--;
+            this.#combo = 0;
+
+            if (this.#lives <= 0) {
+                this.#state = "lost";
+                this.#message = "Tiden tog slut! Game over!";
+            } else {
+                this.#message =
+                    "Tiden tog slut! Ett liv förlorat. Försök igen!";
+                this.#setupRound();
+            }
         }
 
         return this.getSnapshot();
     }
 
     getSnapshot() {
+        const tiles = Array.from(
+            { length: this.totalTiles },
+            (_, index) => {
+                let type = "hidden";
+
+                if (this.#selected.has(index)) {
+                    if (!this.#targets.has(index) &&
+                        !this.#ghosts.has(index) &&
+                        !this.#traps.has(index)) {
+                        // Typen avgörs av vad som låg i rutan.
+                        // Sparas nedan i #revealed i den förbättrade versionen.
+                        type = "empty";
+                    }
+                }
+
+                return Object.freeze({
+                    index,
+                    revealed: this.#selected.has(index),
+                    type
+                });
+            }
+        );
+
         return Object.freeze({
             score: this.#score,
             state: this.#state,
-            remaining: this.#targets.size
+            round: this.#round,
+            totalRounds: this.totalRounds,
+            remaining: this.#targets.size,
+            lives: this.#lives,
+            timeLeft: this.#timeLeft,
+            combo: this.#combo,
+            bestCombo: this.#bestCombo,
+            roundScore: this.#roundScore,
+            message: this.#message,
+            isBossRound: this.#round === this.totalRounds,
+            tiles: Object.freeze(tiles)
         });
     }
 }
