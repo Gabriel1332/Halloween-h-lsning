@@ -264,4 +264,19 @@ class HalloweenGame {
         });
     }
 }
-index.html
+
+const game = new HalloweenGame({
+    totalTiles: 16,
+    targetCount: 5,
+    totalRounds: 10,
+    startingLives: 3,
+    timeLimit: 30
+});
+
+console.log(game.start());
+
+// Spelaren klickar på ruta 4.
+console.log(game.selectTile(4));
+
+// Anropa en gång per sekund från spelets timer.
+console.log(game.tick(1));                
